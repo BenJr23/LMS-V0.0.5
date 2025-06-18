@@ -528,6 +528,30 @@ export default function ForumRequirement({
               </div>
             )}
 
+            {requirement.submission.graded && (
+              <div className="space-y-6">
+                <div className="p-6 bg-green-50 rounded-xl">
+                  <h3 className="text-base font-semibold text-gray-700 mb-2">Score</h3>
+                  <p className="text-gray-600 text-2xl font-semibold">
+                    {requirement.submission.score} / {requirement.scoreBase}
+                  </p>
+                </div>
+
+                {requirement.submission.feedback && (
+                  <div className="p-6 bg-blue-50 rounded-xl">
+                    <h3 className="text-base font-semibold text-gray-700 mb-3 flex items-center">
+                      <MessageSquare className="w-5 h-5 mr-2" />
+                      Feedback
+                    </h3>
+                    <div 
+                      className="text-gray-600 prose prose-lg mx-auto [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:list-decimal [&>ol]:pl-6 [&>p]:mb-6 [&>h1]:text-3xl [&>h1]:font-bold [&>h1]:mb-6 [&>h2]:text-2xl [&>h2]:font-bold [&>h2]:mb-4 [&>h3]:text-xl [&>h3]:font-bold [&>h3]:mb-3 [&>blockquote]:border-l-4 [&>blockquote]:border-[#800000] [&>blockquote]:pl-6 [&>blockquote]:italic [&>pre]:bg-gray-100 [&>pre]:p-6 [&>pre]:rounded-lg [&>code]:bg-gray-100 [&>code]:px-2 [&>code]:py-1 [&>code]:rounded [&>a]:text-[#800000] [&>a]:underline [&>a]:font-medium"
+                      dangerouslySetInnerHTML={{ __html: requirement.submission.feedback }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
             {!requirement.submission.graded && requirement.submission.status === 0 && (
               <div className="mt-8 flex justify-end gap-4">
                 <button
