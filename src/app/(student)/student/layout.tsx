@@ -34,13 +34,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="px-4">
             <ul className="space-y-2">
               <li>
-                <Link href="/student-dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
+                <Link href="/student/dashboard" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
                   Dashboard
                 </Link>
               </li>
               <li>
-                <Link href="/student-calendar" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
-                  Calendar
+                <Link href="/student/subjects" className="block px-4 py-2 rounded-lg hover:bg-white/20 transition font-medium">
+                  Subjects
                 </Link>
               </li>
             </ul>
