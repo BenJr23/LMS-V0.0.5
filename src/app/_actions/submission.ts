@@ -16,6 +16,8 @@ interface CreateSubmissionData {
 interface UpdateSubmissionStatusData {
   submissionId: string;
   status: number;
+  plagiarismScore?: number;
+  plagiarismContent?: string;
 }
 
 interface UpdateSubmissionData {
@@ -128,11 +130,13 @@ export async function updateSubmissionStatus(data: UpdateSubmissionStatusData) {
       throw new Error('Unauthorized');
     }
 
-    // Update the status
+    // Update the status and plagiarism data
     const updatedSubmission = await prisma.submission.update({
       where: { id: data.submissionId },
       data: {
-        status: data.status
+        status: data.status,
+        plagiarismScore: data.plagiarismScore,
+        plagiarismContent: data.plagiarismContent
       }
     });
 

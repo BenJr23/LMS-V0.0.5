@@ -8,6 +8,13 @@ import toast from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 
+interface PlagiarismMatch {
+  source: string;
+  percentage: number;
+  matchedText: string;
+  originalText: string;
+}
+
 interface Submission {
   id: string;
   requirementId: string;
@@ -292,17 +299,39 @@ export default function TeacherRequirementDetailPage({ params }: { params: Promi
                 <div className="bg-pink-50/50 p-4 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Plagiarism Check</h3>
                   {selectedSubmission.plagiarismScore !== null ? (
-                    <div className="space-y-2">
-                      <p className="text-gray-700">
-                        <span className="font-medium">Plagiarism Score:</span> {selectedSubmission.plagiarismScore}%
-                      </p>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-700 font-medium">Overall Similarity</p>
+                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          selectedSubmission.plagiarismScore < 15 ? 'bg-green-100 text-green-700' :
+                          selectedSubmission.plagiarismScore < 30 ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {selectedSubmission.plagiarismScore}% Similar
+                        </span>
+                      </div>
+                      
                       {selectedSubmission.plagiarismContent && (
-                        <div>
-                          <p className="font-medium text-gray-700 mb-1">Plagiarism Report:</p>
-                          <div 
-                            className="text-gray-600 prose prose-sm"
-                            dangerouslySetInnerHTML={{ __html: selectedSubmission.plagiarismContent }}
-                          />
+                        <div className="space-y-4">
+                          <p className="font-medium text-gray-700">Matched Sources:</p>
+                          {JSON.parse(selectedSubmission.plagiarismContent).map((match: PlagiarismMatch, index: number) => (
+                            <div key={index} className="bg-white p-4 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-sm font-medium text-gray-900">{match.source}</span>
+                                <span className="text-sm font-medium text-gray-900">{match.percentage}% match</span>
+                              </div>
+                              <div className="space-y-3">
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Matched Text:</p>
+                                  <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded">{match.matchedText}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1">Original Source:</p>
+                                  <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded">{match.originalText}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
