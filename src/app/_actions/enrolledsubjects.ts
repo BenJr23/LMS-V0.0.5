@@ -24,8 +24,19 @@ export const getEnrolledSubjects = async () => {
         subjectInstance: {
           include: {
             subject: true,
+            requirements: {
+              orderBy: [
+                { type: 'asc' },
+                { requirementNumber: 'asc' }
+              ]
+            }
           },
         },
+        submissions: {
+          include: {
+            requirement: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',

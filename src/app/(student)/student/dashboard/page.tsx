@@ -24,7 +24,22 @@ interface EnrolledSubject {
       name: string;
       code: string;
     };
+    requirements: Array<{
+      id: string;
+      title: string;
+      type: string;
+      requirementNumber: number;
+    }>;
   };
+  submissions: Array<{
+    id: string;
+    requirementId: string;
+    status: number;
+    requirement: {
+      id: string;
+      title: string;
+    };
+  }>;
   createdAt: Date;
 }
 
@@ -34,6 +49,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
   const [isImageLoading, setIsImageLoading] = useState(true);
+
+  // Function to calculate progress percentage
+  const calculateProgress = (enrollment: EnrolledSubject) => {
+    const totalRequirements = enrollment.subjectInstance.requirements.length;
+    if (totalRequirements === 0) return 0;
+    
+    // Count completed submissions (status === 1 means complete)
+    const completedSubmissions = enrollment.submissions.filter(sub => sub.status === 1).length;
+    
+    return Math.round((completedSubmissions / totalRequirements) * 100);
+  };
 
   useEffect(() => {
     const fetchEnrolledSubjects = async () => {
@@ -194,10 +220,10 @@ export default function DashboardPage() {
                   <div className="mt-4">
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
                       <span>Course Progress</span>
-                      <span>0%</span>
+                      <span>{calculateProgress(enrollment)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-[#800000] h-2 rounded-full" style={{ width: '0%' }}></div>
+                      <div className="bg-[#800000] h-2 rounded-full" style={{ width: `${calculateProgress(enrollment)}%` }}></div>
                     </div>
                   </div>
                 </div>
