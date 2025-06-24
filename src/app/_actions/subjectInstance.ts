@@ -15,6 +15,14 @@ type CreateSubjectInstanceInput = {
   enrollment: number;
 };
 
+type EditSubjectInstanceInput = {
+  id: string;
+  teacherName: string;
+  grade: string;
+  section: string;
+  enrollment: number;
+};
+
 export async function getSubjectInstances() {
   try {
     const user = await currentUser();
@@ -96,6 +104,61 @@ export async function createSubjectInstance(data: CreateSubjectInstanceInput) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to create subject instance' 
+    };
+  }
+}
+
+export async function editSubjectInstance(data: EditSubjectInstanceInput) {
+  try {
+    const user = await currentUser();
+
+    if (!user || !user.id) {
+      throw new Error('User not authenticated.');
+    }
+
+    // Validate required fields
+    if (!data.id || !data.teacherName || !data.grade || !data.section) {
+      throw new Error('All fields are required.');
+    }
+
+    // Check if subject instance exists and belongs to the user
+    const existingInstance = await prisma.subjectInstance.findUnique({
+      where: {
+        id: data.id,
+        userId: user.id
+      }
+    });
+
+    if (!existingInstance) {
+      throw new Error('Subject instance not found or you do not have permission to edit it.');
+    }
+
+    // Update the subject instance
+    const updatedInstance = await prisma.subjectInstance.update({
+      where: {
+        id: data.id,
+        userId: user.id
+      },
+      data: {
+        teacherName: data.teacherName,
+        grade: data.grade,
+        section: data.section,
+        enrollment: data.enrollment,
+      },
+      include: {
+        subject: true
+      }
+    });
+
+    return { 
+      success: true, 
+      data: updatedInstance 
+    };
+  } catch (error) {
+    console.error('Error updating subject instance:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update subject instance' 
     };
   }
 }

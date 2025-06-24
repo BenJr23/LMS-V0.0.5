@@ -2,7 +2,7 @@
 
 import { useState, use, useEffect } from 'react';
 import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Calendar, Plus, Eye, Trash2, AlertTriangle, Pencil } from 'lucide-react';
-import { getSubjectInstance, deleteSubjectInstance } from '@/app/_actions/subjectInstance';
+import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
 import toast from 'react-hot-toast';
@@ -100,6 +100,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [isSubjectDeleteModalOpen, setIsSubjectDeleteModalOpen] = useState(false);
   const [isDeletingSubject, setIsDeletingSubject] = useState(false);
+  const [isSavingChanges, setIsSavingChanges] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -170,6 +171,48 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     } finally {
       setIsDeletingSubject(false);
       setIsSubjectDeleteModalOpen(false);
+    }
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      setIsSavingChanges(true);
+      
+      if (!editForm.teacherName || !editForm.grade || !editForm.section) {
+        toast.error('Please fill in all required fields');
+        return;
+      }
+
+      const result = await editSubjectInstance({
+        id: resolvedParams.id,
+        teacherName: editForm.teacherName,
+        grade: editForm.grade,
+        section: editForm.section,
+        enrollment: editForm.enrollment
+      });
+
+      if (result.success) {
+        toast.success('Subject instance updated successfully');
+        setIsEditModalOpen(false);
+        
+        // Update the local state with the new data
+        if (result.data) {
+          setSubjectInstance(prev => prev ? {
+            ...prev,
+            teacherName: result.data.teacherName,
+            grade: result.data.grade,
+            section: result.data.section,
+            enrollment: result.data.enrollment
+          } : null);
+        }
+      } else {
+        toast.error(result.error || 'Failed to update subject instance');
+      }
+    } catch (error) {
+      console.error('Error updating subject instance:', error);
+      toast.error('Failed to update subject instance');
+    } finally {
+      setIsSavingChanges(false);
     }
   };
 
@@ -466,10 +509,18 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                   Cancel
                 </button>
                 <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 rounded bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200"
+                  onClick={handleSaveChanges}
+                  disabled={isSavingChanges}
+                  className="px-4 py-2 rounded bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Save Changes
+                  {isSavingChanges ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </div>

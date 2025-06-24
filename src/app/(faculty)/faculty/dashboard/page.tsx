@@ -48,10 +48,10 @@ type NewSubjectInstance = {
 };
 
 const GRADE_LEVELS = [
-  'Grade 7',
-  'Grade 8',
-  'Grade 9',
-  'Grade 10'
+  { value: '7', label: 'Grade 7' },
+  { value: '8', label: 'Grade 8' },
+  { value: '9', label: 'Grade 9' },
+  { value: '10', label: 'Grade 10' }
 ] as const;
 
 const SECTIONS = ['A', 'B'] as const;
@@ -547,8 +547,8 @@ export default function FacultyDashboard() {
                       >
                         <option value="" className="text-gray-500">Select grade level</option>
                         {GRADE_LEVELS.map((grade) => (
-                          <option key={grade} value={grade}>
-                            {grade}
+                          <option key={grade.value} value={grade.value}>
+                            {grade.label}
                           </option>
                         ))}
                       </select>
