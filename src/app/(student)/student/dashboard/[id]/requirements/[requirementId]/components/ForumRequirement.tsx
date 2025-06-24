@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MessageSquare, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, MessageSquare, X, Loader2, MessageCircle, Send, Bot } from 'lucide-react';
 import { getStudentRequirementDetail } from '@/app/_actions/requirement';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { createSubmission, updateSubmissionStatus, editSubmission } from '@/app/_actions/submission';
+import { getAIResponse } from '@/app/_actions/ai';
 
 interface RequirementDetail {
   id: string;
@@ -331,6 +332,19 @@ export default function ForumRequirement({
     similarity: number;
     matches: PlagiarismMatch[];
   } | undefined>();
+  // --- AI Chatbot State ---
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatExpanded, setIsChatExpanded] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; text: string; isUser: boolean; timestamp: Date }>>([
+    {
+      id: '1',
+      text: "Hello! I'm your AI study assistant. How can I help you with this requirement?",
+      isUser: false,
+      timestamp: new Date()
+    }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   const fetchRequirement = async () => {
     try {
@@ -439,6 +453,72 @@ export default function ForumRequirement({
 
   const handleSubmissionSuccess = () => {
     fetchRequirement();
+  };
+
+  // --- AI Chatbot Handlers ---
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !requirement) return;
+    const userMessage = {
+      id: Date.now().toString(),
+      text: chatInput,
+      isUser: true,
+      timestamp: new Date()
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsTyping(true);
+    try {
+      // Prepare requirement context for AI
+      const requirementContext = {
+        title: requirement.title,
+        content: requirement.content,
+        type: requirement.type,
+        scoreBase: requirement.scoreBase,
+        deadline: requirement.deadline,
+        subjectName: requirement.subjectInstance.subject.name,
+        subjectCode: requirement.subjectInstance.subject.code
+      };
+      // Get AI response using Gemini
+      const response = await getAIResponse(chatInput, requirementContext, chatMessages);
+      if (response.success && response.data) {
+        const aiMessage = {
+          id: (Date.now() + 1).toString(),
+          text: response.data,
+          isUser: false,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Fallback response if AI fails
+        const fallbackMessage = {
+          id: (Date.now() + 1).toString(),
+          text: "I'm having trouble connecting right now. Please try again in a moment or contact your teacher for assistance.",
+          isUser: false,
+          timestamp: new Date()
+        };
+        setChatMessages(prev => [...prev, fallbackMessage]);
+        toast.error('AI service temporarily unavailable');
+      }
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // Fallback response on error
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        text: "I'm experiencing technical difficulties. Please try again later or reach out to your teacher for help.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to get AI response');
+    } finally {
+      setIsTyping(false);
+    }
+  };
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   if (loading) {
@@ -614,6 +694,113 @@ export default function ForumRequirement({
         isChecking={isCheckingPlagiarism}
         checkResults={checkResults}
       />
+      {/* Chatbot */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {/* Chat Button */}
+        {!isChatOpen && (
+          <button
+            onClick={() => setIsChatOpen(true)}
+            className="bg-[#800000] text-white p-4 rounded-full shadow-lg hover:bg-[#600000] transition-all duration-200 hover:scale-110"
+          >
+            <MessageCircle className="w-6 h-6" />
+          </button>
+        )}
+        {/* Chat Window */}
+        {isChatOpen && (
+          <div className={`bg-white rounded-lg shadow-xl border border-gray-200 flex flex-col transition-all duration-300 ${isChatExpanded ? 'h-[70vh] w-[28rem]' : 'h-96 w-80'}`}>
+            {/* Chat Header */}
+            <div className="bg-[#800000] text-white p-4 rounded-t-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Bot className="w-5 h-5" />
+                <span className="font-semibold">Study Assistant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsChatExpanded((prev) => !prev)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  title={isChatExpanded ? 'Collapse' : 'Expand'}
+                >
+                  {isChatExpanded ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                  )}
+                </button>
+                <button
+                  onClick={() => setIsChatOpen(false)}
+                  className="text-white hover:text-gray-200 transition-colors"
+                  title="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            {/* Chat Messages */}
+            <div className={`flex-1 p-4 overflow-y-auto space-y-3`}>
+              {chatMessages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[80%] p-3 rounded-lg ${
+                      message.isUser
+                        ? 'bg-[#800000] text-white'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}
+                  >
+                    {message.isUser ? (
+                      <p className="text-sm">{message.text}</p>
+                    ) : (
+                      <div
+                        className="text-sm prose max-w-full"
+                        dangerouslySetInnerHTML={{ __html: message.text }}
+                      />
+                    )}
+                    <p className={`text-xs mt-1 ${
+                      message.isUser ? 'text-gray-200' : 'text-gray-500'
+                    }`}>
+                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {/* Typing Indicator */}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 text-gray-800 p-3 rounded-lg">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Chat Input */}
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask for help with this requirement..."
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-sm text-gray-900 bg-white"
+                />
+                <button
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim()}
+                  className="bg-[#800000] text-white p-2 rounded-lg hover:bg-[#600000] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 } 
