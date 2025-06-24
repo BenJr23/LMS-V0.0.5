@@ -5,6 +5,7 @@ import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCirc
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
+import { createModuleFolder } from '@/app/_actions/modules';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -101,6 +102,9 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isSubjectDeleteModalOpen, setIsSubjectDeleteModalOpen] = useState(false);
   const [isDeletingSubject, setIsDeletingSubject] = useState(false);
   const [isSavingChanges, setIsSavingChanges] = useState(false);
+  const [isAddFolderModalOpen, setIsAddFolderModalOpen] = useState(false);
+  const [folderName, setFolderName] = useState('');
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -347,6 +351,37 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     }
     setIsDeleteModalOpen(false);
     setSelectedRequirement(null);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!folderName.trim()) {
+      toast.error('Please enter a folder name');
+      return;
+    }
+
+    try {
+      setIsCreatingFolder(true);
+      const result = await createModuleFolder({
+        subjectInstanceId: resolvedParams.id,
+        folderName: folderName.trim()
+      });
+
+      if (result.success) {
+        toast.success('Folder created successfully!');
+        setIsAddFolderModalOpen(false);
+        setFolderName('');
+        // Refresh subject instance data to show new folder
+        const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+        setSubjectInstance(updatedSubjectData);
+      } else {
+        toast.error(result.error || 'Failed to create folder');
+      }
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      toast.error('Failed to create folder');
+    } finally {
+      setIsCreatingFolder(false);
+    }
   };
 
   const handleViewRequirement = (requirement: Requirement) => {
@@ -700,6 +735,59 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {/* Add Folder Modal */}
+      {isAddFolderModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-50 rounded-full">
+                <FileText className="w-6 h-6 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Add New Folder</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Name
+                </label>
+                <input
+                  type="text"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter folder name..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsAddFolderModalOpen(false);
+                  setFolderName('');
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                disabled={isCreatingFolder}
+                className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isCreatingFolder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create Folder'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container */}
       <div className="max-w-[1400px] mx-auto">
         {/* Tabs */}
@@ -744,9 +832,18 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         {/* Files Tab */}
         {activeTab === 'files' && (
           <div className="space-y-4">
-            <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
-              <FileTextIcon className="w-5 h-5" /> Course Files
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-bold text-[#800000] flex items-center gap-2">
+                <FileTextIcon className="w-5 h-5" /> Course Files
+              </h3>
+              <button
+                onClick={() => setIsAddFolderModalOpen(true)}
+                className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-sm flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Add Folder
+              </button>
+            </div>
             {subjectInstance.moduleFolders.map((mod) => (
               <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
                 <h4 className="font-medium text-gray-900 mb-2">{mod.folderName}</h4>
