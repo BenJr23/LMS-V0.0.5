@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, use, useEffect } from 'react';
-import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Calendar, Plus, Eye, Trash2, AlertTriangle, Pencil } from 'lucide-react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Calendar, Plus, Eye, Trash2, AlertTriangle, Pencil, X } from 'lucide-react';
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
-import { createModuleFolder } from '@/app/_actions/modules';
+import { createModuleFolder, uploadModuleFile, createUploadedContent } from '@/app/_actions/modules';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -105,6 +105,11 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isAddFolderModalOpen, setIsAddFolderModalOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null);
+  const [uploadFileName, setUploadFileName] = useState('');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -384,8 +389,78 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     }
   };
 
+  const handleUploadFile = async () => {
+    if (!uploadFile) {
+      toast.error('Please select a file');
+      return;
+    }
+
+    if (!uploadFileName.trim()) {
+      toast.error('Please enter a file name');
+      return;
+    }
+
+    if (!selectedFolder) {
+      toast.error('No folder selected');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      
+      // Upload file to Supabase storage
+      const uploadResult = await uploadModuleFile(uploadFile, selectedFolder.id, uploadFileName.trim());
+      
+      if (!uploadResult.success) {
+        toast.error(uploadResult.error || 'Failed to upload file');
+        return;
+      }
+
+      // Create database record
+      const dbResult = await createUploadedContent({
+        fileName: uploadFileName.trim(),
+        filePath: uploadResult.path!,
+        subjectInstanceId: resolvedParams.id,
+        moduleFolderId: selectedFolder.id
+      });
+
+      if (!dbResult.success) {
+        toast.error(dbResult.error || 'Failed to save file information');
+        return;
+      }
+
+      toast.success('File uploaded successfully!');
+      setIsUploadModalOpen(false);
+      setSelectedFolder(null);
+      setUploadFileName('');
+      setUploadFile(null);
+      
+      // Refresh subject instance data to show new file
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleViewRequirement = (requirement: Requirement) => {
     router.push(`/faculty/dashboard/${resolvedParams.id}/requirements/${requirement.id}`);
+  };
+
+  const handleDownloadFile = (filePath: string, fileName: string) => {
+    const downloadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${filePath}`;
+    
+    // Create a temporary link element to trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = fileName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (isLoading) {
@@ -788,6 +863,131 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {/* Upload File Modal */}
+      {isUploadModalOpen && selectedFolder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-green-50 rounded-full">
+                <FileText className="w-6 h-6 text-green-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Upload File</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Uploading to: <span className="font-medium">{selectedFolder.name}</span>
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  File Name
+                </label>
+                <input
+                  type="text"
+                  value={uploadFileName}
+                  onChange={(e) => setUploadFileName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter file name..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select File
+                </label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                    uploadFile ? 'border-[#800000] bg-pink-50' : 'border-gray-300 hover:border-[#800000]'
+                  }`}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.add('border-[#800000]', 'bg-pink-50');
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('border-[#800000]', 'bg-pink-50');
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('border-[#800000]', 'bg-pink-50');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                      setUploadFile(files[0]);
+                    }
+                  }}
+                >
+                  {uploadFile ? (
+                    <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="w-6 h-6 text-[#800000]" />
+                        <span className="text-sm text-gray-700">{uploadFile.name}</span>
+                      </div>
+                      <button
+                        onClick={() => setUploadFile(null)}
+                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <FileText className="w-12 h-12 text-gray-400 mx-auto" />
+                      <div className="space-y-2">
+                        <p className="text-gray-600">
+                          Drag and drop your file here, or{' '}
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById('file-input')?.click()}
+                            className="text-[#800000] hover:text-[#800000]/80 font-medium"
+                          >
+                            browse
+                          </button>
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Supported formats: PDF, DOC, DOCX, TXT, PPTX, XLSX
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    id="file-input"
+                    type="file"
+                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.pptx,.xlsx"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsUploadModalOpen(false);
+                  setSelectedFolder(null);
+                  setUploadFileName('');
+                  setUploadFile(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadFile}
+                disabled={isUploading}
+                className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Uploading...
+                  </>
+                ) : (
+                  'Upload File'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container */}
       <div className="max-w-[1400px] mx-auto">
         {/* Tabs */}
@@ -846,7 +1046,19 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
             </div>
             {subjectInstance.moduleFolders.map((mod) => (
               <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
-                <h4 className="font-medium text-gray-900 mb-2">{mod.folderName}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-gray-900">{mod.folderName}</h4>
+                  <button
+                    onClick={() => {
+                      setSelectedFolder({ id: mod.id, name: mod.folderName });
+                      setIsUploadModalOpen(true);
+                    }}
+                    className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Upload
+                  </button>
+                </div>
                 {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
                   <div className="text-gray-400 italic text-sm">No files available for this module.</div>
                 ) : (
@@ -855,12 +1067,15 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                       .filter(content => content.moduleFolderId === mod.id)
                       .map((file) => (
                         <li key={file.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
-                          <span className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDownloadFile(file.filePath, file.fileName)}
+                            className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
+                          >
                             {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
                              file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
                              <File className="w-4 h-4 text-gray-400" />}
-                            {file.fileName}
-                          </span>
+                            <span className="hover:underline">{file.fileName}</span>
+                          </button>
                           <span className="text-xs text-gray-500">
                             {new Date(file.updatedAt).toLocaleDateString()}
                           </span>
