@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 import { Toaster } from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { uploadRequirementFile } from '@/app/_actions/uploadRequirement';
+import DOMPurify from 'dompurify';
 
 interface RequirementDetail {
   id: string;
@@ -1068,7 +1069,7 @@ export default function RequirementDetail({
                     ) : (
                       <div
                         className="text-sm prose max-w-full"
-                        dangerouslySetInnerHTML={{ __html: message.text }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.text) }}
                       />
                     )}
                     <p className={`text-xs mt-1 ${

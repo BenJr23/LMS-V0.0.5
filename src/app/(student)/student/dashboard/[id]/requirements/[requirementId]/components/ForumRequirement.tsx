@@ -9,6 +9,7 @@ import { Toaster } from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { createSubmission, updateSubmissionStatus, editSubmission } from '@/app/_actions/submission';
 import { getAIResponse } from '@/app/_actions/ai';
+import DOMPurify from 'dompurify';
 
 interface RequirementDetail {
   id: string;
@@ -754,7 +755,7 @@ export default function ForumRequirement({
                     ) : (
                       <div
                         className="text-sm prose max-w-full"
-                        dangerouslySetInnerHTML={{ __html: message.text }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.text) }}
                       />
                     )}
                     <p className={`text-xs mt-1 ${
