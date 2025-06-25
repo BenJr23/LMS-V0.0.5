@@ -5,7 +5,7 @@ import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCirc
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
-import { createModuleFolder, uploadModuleFile, createUploadedContent } from '@/app/_actions/modules';
+import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile } from '@/app/_actions/modules';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -488,10 +488,24 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     try {
       setIsDeletingFile(true);
       
-      // TODO: Add delete file functionality
-      // 1. Delete from Supabase storage
-      // 2. Delete from database
+      // Find the file in the uploadedContents array to get the filePath
+      const fileToDeleteData = subjectInstance?.uploadedContents.find(
+        content => content.id === fileToDelete.id
+      );
+
+      if (!fileToDeleteData) {
+        toast.error('File not found');
+        return;
+      }
+
+      // Delete the file using the deleteModuleFile function
+      const result = await deleteModuleFile(fileToDelete.id, fileToDeleteData.filePath);
       
+      if (!result.success) {
+        toast.error(result.error || 'Failed to delete file');
+        return;
+      }
+
       toast.success('File deleted successfully!');
       
       // Refresh subject instance data

@@ -179,3 +179,50 @@ export async function createUploadedContent(data: {
     };
   }
 }
+
+export async function deleteModuleFile(fileId: string, filePath: string) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated'
+      };
+    }
+
+    // First, delete the file from Supabase storage
+    const { error: storageError } = await supabaseAdmin.storage
+      .from('lms')
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error('Error deleting file from storage:', storageError);
+      return {
+        success: false,
+        error: 'Failed to delete file from storage'
+      };
+    }
+
+    // Then, delete the database record
+    await prisma.uploadedContent.delete({
+      where: {
+        id: fileId
+      }
+    });
+
+    console.log('Module file deleted successfully:', {
+      fileId,
+      filePath
+    });
+
+    return {
+      success: true
+    };
+  } catch (error) {
+    console.error('Error in deleteModuleFile:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete file'
+    };
+  }
+}
