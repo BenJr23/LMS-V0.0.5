@@ -181,134 +181,44 @@ function ForumPostModal({ isOpen, onClose, requirementId, onSuccess, initialData
   );
 }
 
-interface PlagiarismMatch {
-  source: string;
-  percentage: number;
-  matchedText: string;
-  originalText: string;
-}
-
-interface PlagiarismCheckModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  isChecking: boolean;
-  checkResults?: {
-    similarity: number;
-    matches: PlagiarismMatch[];
-  };
-}
-
-function PlagiarismCheckModal({ isOpen, onClose, onConfirm, isChecking, checkResults }: PlagiarismCheckModalProps) {
+function CompletePostConfirmationModal({ isOpen, onClose, onConfirm, isCompleting }: { isOpen: boolean; onClose: () => void; onConfirm: () => void; isCompleting: boolean }) {
   if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center gap-3 mb-4">
             <div className="bg-blue-100 p-2 rounded-full">
               <MessageSquare className="w-6 h-6 text-blue-500" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900">Plagiarism Check Results</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Complete Post</h2>
           </div>
-          
-          {!checkResults ? (
-            <p className="text-gray-600">
-              Checking your post for potential plagiarism. This may take a few moments...
-            </p>
-          ) : (
-            <div className="space-y-6">
-              <div className="p-4 rounded-lg bg-gray-50">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Overall Similarity</h3>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    checkResults.similarity < 15 ? 'bg-green-100 text-green-700' :
-                    checkResults.similarity < 30 ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {checkResults.similarity}% Similar
-                  </span>
-                </div>
-                
-                {checkResults.matches.length > 0 && (
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-medium text-gray-700">Matched Sources:</h4>
-                    <div className="space-y-4">
-                      {checkResults.matches.map((match, index) => (
-                        <div key={index} className="p-4 bg-white rounded border border-gray-200">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium text-gray-900">{match.source}</span>
-                            <span className="text-sm font-medium text-gray-900">{match.percentage}% match</span>
-                          </div>
-                          <div className="space-y-2">
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Matched Text:</p>
-                              <p className="text-sm text-gray-700 bg-yellow-50 p-2 rounded">{match.matchedText}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-1">Original Source:</p>
-                              <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded">{match.originalText}</p>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-4 rounded-lg bg-blue-50">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Recommendation</h3>
-                <p className="text-gray-600">
-                  {checkResults.similarity < 15 ? 
-                    "Your post shows low similarity with other sources. You can proceed with submission." :
-                    checkResults.similarity < 30 ?
-                    "Your post shows moderate similarity. Please review the matched sources and ensure proper citations." :
-                    "Your post shows high similarity. Please review and revise your content to ensure originality."
-                  }
-                </p>
-              </div>
-            </div>
-          )}
+          <p className="text-gray-600">
+            Are you sure you want to mark this post as complete? You will not be able to edit it after this.
+          </p>
         </div>
         <div className="p-6 flex justify-end gap-4">
           <button
             onClick={onClose}
             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            disabled={isChecking}
+            disabled={isCompleting}
           >
-            {checkResults ? 'Close' : 'Cancel'}
+            Cancel
           </button>
-          {checkResults && (
-            <button
-              onClick={onConfirm}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                checkResults.similarity < 30 
-                  ? 'bg-[#800000] text-white hover:bg-[#800000]/90' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              disabled={checkResults.similarity >= 30}
-            >
-              Complete Post
-            </button>
-          )}
-          {!checkResults && (
-            <button
-              onClick={onConfirm}
-              className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#800000]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-              disabled={isChecking}
-            >
-              {isChecking ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Checking...
-                </>
-              ) : (
-                'Check Plagiarism'
-              )}
-            </button>
-          )}
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 bg-[#800000] text-white rounded-lg hover:bg-[#800000]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            disabled={isCompleting}
+          >
+            {isCompleting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Completing...
+              </>
+            ) : (
+              'Complete Post'
+            )}
+          </button>
         </div>
       </div>
     </div>
@@ -327,12 +237,8 @@ export default function ForumRequirement({
   const [loading, setLoading] = useState(true);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isPlagiarismModalOpen, setIsPlagiarismModalOpen] = useState(false);
-  const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
-  const [checkResults, setCheckResults] = useState<{
-    similarity: number;
-    matches: PlagiarismMatch[];
-  } | undefined>();
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   // --- AI Chatbot State ---
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isChatExpanded, setIsChatExpanded] = useState(false);
@@ -375,80 +281,26 @@ export default function ForumRequirement({
     fetchRequirement();
   }, [requirementId, router, id]);
 
-  const handlePlagiarismCheck = async () => {
-    if (!requirement?.submission) return;
-
-    try {
-      setIsCheckingPlagiarism(true);
-      // Simulate plagiarism check delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock plagiarism check results
-      const mockResults = {
-        similarity: Math.floor(Math.random() * 40), // Random similarity between 0-40%
-        matches: [
-          {
-            source: "Academic Database - Research Paper",
-            percentage: Math.floor(Math.random() * 20),
-            matchedText: "The implementation of machine learning algorithms in educational systems has shown significant improvements in student performance and engagement.",
-            originalText: "The implementation of machine learning algorithms in educational systems has shown significant improvements in student performance and engagement."
-          },
-          {
-            source: "Online Journal Article",
-            percentage: Math.floor(Math.random() * 15),
-            matchedText: "Recent studies indicate that blended learning approaches combining traditional classroom methods with digital tools yield better learning outcomes.",
-            originalText: "Recent studies indicate that blended learning approaches combining traditional classroom methods with digital tools yield better learning outcomes."
-          },
-          {
-            source: "Conference Proceedings",
-            percentage: Math.floor(Math.random() * 10),
-            matchedText: "The integration of artificial intelligence in assessment systems has revolutionized the way educators evaluate student progress.",
-            originalText: "The integration of artificial intelligence in assessment systems has revolutionized the way educators evaluate student progress."
-          }
-        ].filter(match => match.percentage > 0)
-      };
-
-      setCheckResults(mockResults);
-
-      // Update submission with plagiarism results
-      const response = await updateSubmissionStatus({
-        submissionId: requirement.submission.id,
-        status: 0, // Keep as draft
-        plagiarismScore: mockResults.similarity,
-        plagiarismContent: JSON.stringify(mockResults.matches)
-      });
-
-      if (!response.success) {
-        toast.error('Failed to save plagiarism results');
-      }
-    } catch (error) {
-      console.error('Error checking plagiarism:', error);
-      toast.error('Failed to check plagiarism');
-    } finally {
-      setIsCheckingPlagiarism(false);
-    }
-  };
-
   const handleCompleteSubmission = async () => {
     if (!requirement?.submission) return;
-
     try {
+      setIsCompleting(true);
       const response = await updateSubmissionStatus({
         submissionId: requirement.submission.id,
         status: 1 // Complete
       });
-
       if (response.success) {
         toast.success('Post completed successfully');
         fetchRequirement();
-        setIsPlagiarismModalOpen(false);
-        setCheckResults(undefined);
+        setIsCompleteModalOpen(false);
       } else {
         toast.error(response.error || 'Failed to complete post');
       }
     } catch (error) {
       console.error('Error completing post:', error);
       toast.error('Failed to complete post');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -642,10 +494,10 @@ export default function ForumRequirement({
                   Edit Post
                 </button>
                 <button
-                  onClick={() => setIsPlagiarismModalOpen(true)}
+                  onClick={() => setIsCompleteModalOpen(true)}
                   className="px-6 py-3 bg-[#800000] text-white rounded-lg hover:bg-[#800000]/90 transition-colors text-lg font-medium"
                 >
-                  Check for Plagiarism
+                  Complete Post
                 </button>
               </div>
             )}
@@ -684,17 +536,14 @@ export default function ForumRequirement({
         } : undefined}
       />
 
-      {/* Add the Plagiarism Check Modal */}
-      <PlagiarismCheckModal
-        isOpen={isPlagiarismModalOpen}
-        onClose={() => {
-          setIsPlagiarismModalOpen(false);
-          setCheckResults(undefined);
-        }}
-        onConfirm={checkResults ? handleCompleteSubmission : handlePlagiarismCheck}
-        isChecking={isCheckingPlagiarism}
-        checkResults={checkResults}
+      {/* Add the Complete Post Confirmation Modal */}
+      <CompletePostConfirmationModal
+        isOpen={isCompleteModalOpen}
+        onClose={() => setIsCompleteModalOpen(false)}
+        onConfirm={handleCompleteSubmission}
+        isCompleting={isCompleting}
       />
+
       {/* Chatbot */}
       <div className="fixed bottom-6 right-6 z-50">
         {/* Chat Button */}
