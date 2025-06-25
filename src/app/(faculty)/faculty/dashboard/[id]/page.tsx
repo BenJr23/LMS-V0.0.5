@@ -6,7 +6,7 @@ import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
 import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder, deleteModuleFolder } from '@/app/_actions/modules';
-import { createAnnouncement } from '@/app/_actions/announcements';
+import { createAnnouncement, editAnnouncement, deleteAnnouncement } from '@/app/_actions/announcements';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -122,6 +122,12 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isAddAnnouncementModalOpen, setIsAddAnnouncementModalOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
   const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<{ id: string; title: string } | null>(null);
+  const [isEditAnnouncementModalOpen, setIsEditAnnouncementModalOpen] = useState(false);
+  const [isDeleteAnnouncementModalOpen, setIsDeleteAnnouncementModalOpen] = useState(false);
+  const [editAnnouncementForm, setEditAnnouncementForm] = useState({ title: '', content: '' });
+  const [isEditingAnnouncement, setIsEditingAnnouncement] = useState(false);
+  const [isDeletingAnnouncement, setIsDeletingAnnouncement] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -620,6 +626,66 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       toast.error('Failed to create announcement');
     } finally {
       setIsCreatingAnnouncement(false);
+    }
+  };
+
+  const openEditAnnouncementModal = (announcement: { id: string; title: string; content: string }) => {
+    setSelectedAnnouncement({ id: announcement.id, title: announcement.title });
+    setEditAnnouncementForm({ title: announcement.title, content: announcement.content });
+    setIsEditAnnouncementModalOpen(true);
+  };
+
+  const handleEditAnnouncement = async () => {
+    if (!selectedAnnouncement || !editAnnouncementForm.title.trim() || !editAnnouncementForm.content.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    try {
+      setIsEditingAnnouncement(true);
+      const result = await editAnnouncement({
+        announcementId: selectedAnnouncement.id,
+        title: editAnnouncementForm.title,
+        content: editAnnouncementForm.content
+      });
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update announcement');
+        return;
+      }
+      toast.success('Announcement updated successfully!');
+      setIsEditAnnouncementModalOpen(false);
+      setSelectedAnnouncement(null);
+      setEditAnnouncementForm({ title: '', content: '' });
+      // Refresh announcements
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error editing announcement:', error);
+      toast.error('Failed to update announcement');
+    } finally {
+      setIsEditingAnnouncement(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!selectedAnnouncement) return;
+    try {
+      setIsDeletingAnnouncement(true);
+      const result = await deleteAnnouncement(selectedAnnouncement.id);
+      if (!result.success) {
+        toast.error(result.error || 'Failed to delete announcement');
+        return;
+      }
+      toast.success('Announcement deleted successfully!');
+      setIsDeleteAnnouncementModalOpen(false);
+      setSelectedAnnouncement(null);
+      // Refresh announcements
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      toast.error('Failed to delete announcement');
+    } finally {
+      setIsDeletingAnnouncement(false);
     }
   };
 
@@ -1338,7 +1404,26 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                   <Bell className="text-[#800000] w-6 h-6" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-semibold text-[#800000] text-lg">{item.title}</h4>
+                  <h4 className="font-semibold text-[#800000] text-lg flex items-center gap-2">
+                    {item.title}
+                    <button
+                      onClick={() => openEditAnnouncementModal(item)}
+                      className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
+                      title="Edit announcement"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedAnnouncement({ id: item.id, title: item.title });
+                        setIsDeleteAnnouncementModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                      title="Delete announcement"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </h4>
                   <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
                   <div
                     className="mt-1 text-gray-800 text-sm prose max-w-none"
@@ -1585,6 +1670,115 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                   </>
                 ) : (
                   'Create'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Announcement Modal */}
+      {isEditAnnouncementModalOpen && selectedAnnouncement && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-8">
+            <div className="border-b border-gray-200 px-8 py-6 sticky top-0 bg-white z-10">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Announcement</h3>
+              <p className="text-sm text-gray-600 mt-2">Update the announcement details below.</p>
+            </div>
+            <div className="p-8 space-y-8 max-h-[calc(100vh-16rem)] overflow-y-auto">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <input
+                  type="text"
+                  value={editAnnouncementForm.title}
+                  onChange={e => setEditAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter announcement title..."
+                  disabled={isEditingAnnouncement}
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Content</label>
+                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                  <RichTextEditor
+                    content={editAnnouncementForm.content}
+                    onChange={content => setEditAnnouncementForm(prev => ({ ...prev, content }))}
+                    placeholder="Enter announcement content..."
+                    className="min-h-[200px]"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 px-8 py-6 bg-gray-50 rounded-b-xl sticky bottom-0 flex justify-end gap-4">
+              <button
+                onClick={() => {
+                  setIsEditAnnouncementModalOpen(false);
+                  setSelectedAnnouncement(null);
+                  setEditAnnouncementForm({ title: '', content: '' });
+                }}
+                className="px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-base"
+                disabled={isEditingAnnouncement}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditAnnouncement}
+                disabled={isEditingAnnouncement}
+                className="px-6 py-3 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-base shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isEditingAnnouncement ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Announcement Confirmation Modal */}
+      {isDeleteAnnouncementModalOpen && selectedAnnouncement && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-50 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Delete Announcement</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete &ldquo;{selectedAnnouncement.title}&rdquo;? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteAnnouncementModalOpen(false);
+                  setSelectedAnnouncement(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+                disabled={isDeletingAnnouncement}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAnnouncement}
+                disabled={isDeletingAnnouncement}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 font-medium flex items-center gap-2"
+              >
+                {isDeletingAnnouncement ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Announcement
+                  </>
                 )}
               </button>
             </div>
