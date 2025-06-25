@@ -22,13 +22,21 @@ export async function createAnnouncement({
     if (!subjectInstanceId || !title.trim() || !content.trim()) {
       return { success: false, error: 'All fields are required' };
     }
-    const announcement = await prisma.announcement.create({
-      data: {
-        subjectInstanceId,
-        userId: user.id,
-        title: title,
-        content: content
-      }
+    // Create announcement and update enrolments in a transaction
+    const announcement = await prisma.$transaction(async (tx) => {
+      const newAnnouncement = await tx.announcement.create({
+        data: {
+          subjectInstanceId,
+          userId: user.id,
+          title: title,
+          content: content
+        }
+      });
+      await tx.enrolment.updateMany({
+        where: { subjectInstanceId },
+        data: { hasNewContent: true }
+      });
+      return newAnnouncement;
     });
     return { success: true, data: announcement };
   } catch (error) {
@@ -54,16 +62,24 @@ export async function editAnnouncement({
     if (!announcementId || !title || !content) {
       return { success: false, error: 'All fields are required' };
     }
-    // Check ownership
+    // Check ownership and get subjectInstanceId
     const announcement = await prisma.announcement.findUnique({
       where: { id: announcementId }
     });
     if (!announcement || announcement.userId !== user.id) {
       return { success: false, error: 'Announcement not found or no permission' };
     }
-    const updated = await prisma.announcement.update({
-      where: { id: announcementId },
-      data: { title, content }
+    // Update announcement and enrolments in a transaction
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedAnnouncement = await tx.announcement.update({
+        where: { id: announcementId },
+        data: { title, content }
+      });
+      await tx.enrolment.updateMany({
+        where: { subjectInstanceId: announcement.subjectInstanceId },
+        data: { hasNewContent: true }
+      });
+      return updatedAnnouncement;
     });
     return { success: true, data: updated };
   } catch (error) {
