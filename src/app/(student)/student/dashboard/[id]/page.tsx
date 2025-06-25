@@ -261,7 +261,10 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                 <div className="flex-1">
                   <h4 className="font-semibold text-[#800000] text-lg">{item.title}</h4>
                   <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
-                  <p className="mt-1 text-gray-800 text-sm">{item.content}</p>
+                  <div
+                    className="mt-1 text-gray-800 text-sm prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: item.content }}
+                  />
                 </div>
               </div>
             ))}
