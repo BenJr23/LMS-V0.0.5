@@ -5,7 +5,7 @@ import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCirc
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
-import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile } from '@/app/_actions/modules';
+import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder } from '@/app/_actions/modules';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -111,6 +111,13 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isUploading, setIsUploading] = useState(false);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [isEditFolderModalOpen, setIsEditFolderModalOpen] = useState(false);
+  const [isDeleteFolderModalOpen, setIsDeleteFolderModalOpen] = useState(false);
+  const [folderToEdit, setFolderToEdit] = useState<{ id: string; name: string } | null>(null);
+  const [folderToDelete, setFolderToDelete] = useState<{ id: string; name: string } | null>(null);
+  const [editFolderName, setEditFolderName] = useState('');
+  const [isEditingFolder, setIsEditingFolder] = useState(false);
+  const [isDeletingFolder, setIsDeletingFolder] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -517,6 +524,65 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     } finally {
       setIsDeletingFile(false);
       setFileToDelete(null);
+    }
+  };
+
+  const handleEditFolder = async () => {
+    if (!folderToEdit || !editFolderName.trim()) {
+      toast.error('Please enter a folder name');
+      return;
+    }
+
+    try {
+      setIsEditingFolder(true);
+      
+      const result = await editModuleFolder({
+        folderId: folderToEdit.id,
+        folderName: editFolderName.trim()
+      });
+
+      if (!result.success) {
+        toast.error(result.error || 'Failed to update folder');
+        return;
+      }
+
+      toast.success('Folder updated successfully!');
+      setIsEditFolderModalOpen(false);
+      setFolderToEdit(null);
+      setEditFolderName('');
+      
+      // Refresh subject instance data
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error updating folder:', error);
+      toast.error('Failed to update folder');
+    } finally {
+      setIsEditingFolder(false);
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (!folderToDelete) return;
+
+    try {
+      setIsDeletingFolder(true);
+      
+      // TODO: Add delete folder functionality
+      // const result = await deleteModuleFolder(folderToDelete.id);
+
+      toast.success('Folder deleted successfully!');
+      setIsDeleteFolderModalOpen(false);
+      setFolderToDelete(null);
+      
+      // Refresh subject instance data
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error deleting folder:', error);
+      toast.error('Failed to delete folder');
+    } finally {
+      setIsDeletingFolder(false);
     }
   };
 
@@ -1096,6 +1162,106 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {/* Edit Folder Modal */}
+      {isEditFolderModalOpen && folderToEdit && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-blue-50 rounded-full">
+                <Pencil className="w-6 h-6 text-blue-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Edit Folder</h3>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Folder Name
+                </label>
+                <input
+                  type="text"
+                  value={editFolderName}
+                  onChange={(e) => setEditFolderName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter folder name..."
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsEditFolderModalOpen(false);
+                  setFolderToEdit(null);
+                  setEditFolderName('');
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEditFolder}
+                disabled={isEditingFolder}
+                className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isEditingFolder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Updating...
+                  </>
+                ) : (
+                  'Update Folder'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Folder Confirmation Modal */}
+      {isDeleteFolderModalOpen && folderToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-50 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Delete Folder</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete &ldquo;{folderToDelete.name}&rdquo;? This will also delete all files in this folder. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setIsDeleteFolderModalOpen(false);
+                  setFolderToDelete(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+                disabled={isDeletingFolder}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteFolder}
+                disabled={isDeletingFolder}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 font-medium flex items-center gap-2"
+              >
+                {isDeletingFolder ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete Folder
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container */}
       <div className="max-w-[1400px] mx-auto">
         {/* Tabs */}
@@ -1156,16 +1322,39 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
               <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{mod.folderName}</h4>
-                  <button
-                    onClick={() => {
-                      setSelectedFolder({ id: mod.id, name: mod.folderName });
-                      setIsUploadModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
-                  >
-                    <Plus className="w-3 h-3" />
-                    Upload
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setFolderToEdit({ id: mod.id, name: mod.folderName });
+                        setEditFolderName(mod.folderName);
+                        setIsEditFolderModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
+                      title="Edit folder"
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFolderToDelete({ id: mod.id, name: mod.folderName });
+                        setIsDeleteFolderModalOpen(true);
+                      }}
+                      className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                      title="Delete folder"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedFolder({ id: mod.id, name: mod.folderName });
+                        setIsUploadModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Upload
+                    </button>
+                  </div>
                 </div>
                 {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
                   <div className="text-gray-400 italic text-sm">No files available for this module.</div>

@@ -226,3 +226,69 @@ export async function deleteModuleFile(fileId: string, filePath: string) {
     };
   }
 }
+
+export async function editModuleFolder({
+  folderId,
+  folderName
+}: { folderId: string; folderName: string }) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated'
+      };
+    }
+
+    // Validate input
+    if (!folderId || !folderName.trim()) {
+      return {
+        success: false,
+        error: 'All fields are required'
+      };
+    }
+
+    // Find the folder and check ownership
+    const folder = await prisma.moduleFolder.findUnique({
+      where: { id: folderId }
+    });
+    if (!folder || folder.userId !== user.id) {
+      return {
+        success: false,
+        error: 'Folder not found or you do not have permission to edit it.'
+      };
+    }
+
+    // Prevent duplicate folder names for the same subjectInstanceId
+    const existingFolder = await prisma.moduleFolder.findFirst({
+      where: {
+        subjectInstanceId: folder.subjectInstanceId,
+        folderName: folderName.trim(),
+        NOT: { id: folderId }
+      }
+    });
+    if (existingFolder) {
+      return {
+        success: false,
+        error: 'A folder with this name already exists.'
+      };
+    }
+
+    // Update the folder name
+    const updatedFolder = await prisma.moduleFolder.update({
+      where: { id: folderId },
+      data: { folderName: folderName.trim() }
+    });
+
+    return {
+      success: true,
+      data: updatedFolder
+    };
+  } catch (error) {
+    console.error('Error editing module folder:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to edit module folder'
+    };
+  }
+}
