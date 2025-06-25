@@ -54,13 +54,21 @@ export async function createModuleFolder({
       };
     }
 
-    // Create the module folder
-    const moduleFolder = await prisma.moduleFolder.create({
-      data: {
-        subjectInstanceId,
-        userId: user.id,
-        folderName: folderName.trim()
-      }
+    // Create the module folder and update enrolments in a transaction
+    const moduleFolder = await prisma.$transaction(async (tx) => {
+      const newFolder = await tx.moduleFolder.create({
+        data: {
+          subjectInstanceId,
+          userId: user.id,
+          folderName: folderName.trim()
+        }
+      });
+      // Update all enrolments for this subject instance
+      await tx.enrolment.updateMany({
+        where: { subjectInstanceId },
+        data: { hasNewContent: true }
+      });
+      return newFolder;
     });
 
     return {
@@ -158,13 +166,22 @@ export async function createUploadedContent(data: {
       };
     }
 
-    const uploadedContent = await prisma.uploadedContent.create({
-      data: {
-        fileName: data.fileName,
-        filePath: data.filePath,
-        subjectInstanceId: data.subjectInstanceId,
-        moduleFolderId: data.moduleFolderId
-      }
+    // Create uploaded content and update enrolments in a transaction
+    const uploadedContent = await prisma.$transaction(async (tx) => {
+      const newContent = await tx.uploadedContent.create({
+        data: {
+          fileName: data.fileName,
+          filePath: data.filePath,
+          subjectInstanceId: data.subjectInstanceId,
+          moduleFolderId: data.moduleFolderId
+        }
+      });
+      // Update all enrolments for this subject instance
+      await tx.enrolment.updateMany({
+        where: { subjectInstanceId: data.subjectInstanceId },
+        data: { hasNewContent: true }
+      });
+      return newContent;
     });
 
     return {
@@ -274,10 +291,18 @@ export async function editModuleFolder({
       };
     }
 
-    // Update the folder name
-    const updatedFolder = await prisma.moduleFolder.update({
-      where: { id: folderId },
-      data: { folderName: folderName.trim() }
+    // Update the folder name and update enrolments in a transaction
+    const updatedFolder = await prisma.$transaction(async (tx) => {
+      const updated = await tx.moduleFolder.update({
+        where: { id: folderId },
+        data: { folderName: folderName.trim() }
+      });
+      // Update all enrolments for this subject instance
+      await tx.enrolment.updateMany({
+        where: { subjectInstanceId: folder.subjectInstanceId },
+        data: { hasNewContent: true }
+      });
+      return updated;
     });
 
     return {
