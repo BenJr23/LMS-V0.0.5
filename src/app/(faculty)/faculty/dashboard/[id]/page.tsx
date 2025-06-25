@@ -6,6 +6,7 @@ import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
 import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder, deleteModuleFolder } from '@/app/_actions/modules';
+import { createAnnouncement } from '@/app/_actions/announcements';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -120,6 +121,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isDeletingFolder, setIsDeletingFolder] = useState(false);
   const [isAddAnnouncementModalOpen, setIsAddAnnouncementModalOpen] = useState(false);
   const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
+  const [isCreatingAnnouncement, setIsCreatingAnnouncement] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -588,6 +590,36 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       toast.error('Failed to delete folder');
     } finally {
       setIsDeletingFolder(false);
+    }
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!announcementForm.title.trim() || !announcementForm.content.trim()) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+    try {
+      setIsCreatingAnnouncement(true);
+      const result = await createAnnouncement({
+        subjectInstanceId: resolvedParams.id,
+        title: announcementForm.title,
+        content: announcementForm.content
+      });
+      if (!result.success) {
+        toast.error(result.error || 'Failed to create announcement');
+        return;
+      }
+      toast.success('Announcement created successfully!');
+      setIsAddAnnouncementModalOpen(false);
+      setAnnouncementForm({ title: '', content: '' });
+      // Refresh subject instance data to show new announcement
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      toast.error('Failed to create announcement');
+    } finally {
+      setIsCreatingAnnouncement(false);
     }
   };
 
@@ -1515,6 +1547,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                   onChange={e => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
                   className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
                   placeholder="Enter announcement title..."
+                  disabled={isCreatingAnnouncement}
                 />
               </div>
               <div className="space-y-3">
@@ -1533,14 +1566,23 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
               <button
                 onClick={() => setIsAddAnnouncementModalOpen(false)}
                 className="px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-base"
+                disabled={isCreatingAnnouncement}
               >
                 Cancel
               </button>
               <button
-                // onClick={handleCreateAnnouncement}
-                className="px-6 py-3 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-base shadow-sm"
+                onClick={handleCreateAnnouncement}
+                disabled={isCreatingAnnouncement}
+                className="px-6 py-3 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-base shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                Create
+                {isCreatingAnnouncement ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create'
+                )}
               </button>
             </div>
           </div>
