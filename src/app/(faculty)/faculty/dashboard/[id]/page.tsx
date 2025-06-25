@@ -118,6 +118,8 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [editFolderName, setEditFolderName] = useState('');
   const [isEditingFolder, setIsEditingFolder] = useState(false);
   const [isDeletingFolder, setIsDeletingFolder] = useState(false);
+  const [isAddAnnouncementModalOpen, setIsAddAnnouncementModalOpen] = useState(false);
+  const [announcementForm, setAnnouncementForm] = useState({ title: '', content: '' });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1293,7 +1295,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
               <button
                 className="ml-2 p-1.5 rounded-md bg-[#800000] text-white hover:bg-[#a52a2a] transition-colors duration-200 shadow-sm flex items-center"
                 title="Add Announcement"
-                // onClick={() => setIsAddAnnouncementModalOpen(true)}
+                onClick={() => setIsAddAnnouncementModalOpen(true)}
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -1495,6 +1497,55 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
           </div>
         )}
       </div>
+
+      {/* Add Announcement Modal */}
+      {isAddAnnouncementModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl my-8">
+            <div className="border-b border-gray-200 px-8 py-6 sticky top-0 bg-white z-10">
+              <h3 className="text-2xl font-bold text-gray-900">Add Announcement</h3>
+              <p className="text-sm text-gray-600 mt-2">Create a new announcement for your students.</p>
+            </div>
+            <div className="p-8 space-y-8 max-h-[calc(100vh-16rem)] overflow-y-auto">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <input
+                  type="text"
+                  value={announcementForm.title}
+                  onChange={e => setAnnouncementForm(prev => ({ ...prev, title: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
+                  placeholder="Enter announcement title..."
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">Content</label>
+                <div className="border border-gray-300 rounded-lg overflow-hidden">
+                  <RichTextEditor
+                    content={announcementForm.content}
+                    onChange={content => setAnnouncementForm(prev => ({ ...prev, content }))}
+                    placeholder="Enter announcement content..."
+                    className="min-h-[200px]"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="border-t border-gray-200 px-8 py-6 bg-gray-50 rounded-b-xl sticky bottom-0 flex justify-end gap-4">
+              <button
+                onClick={() => setIsAddAnnouncementModalOpen(false)}
+                className="px-6 py-3 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors duration-200 font-medium text-base"
+              >
+                Cancel
+              </button>
+              <button
+                // onClick={handleCreateAnnouncement}
+                className="px-6 py-3 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-base shadow-sm"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
