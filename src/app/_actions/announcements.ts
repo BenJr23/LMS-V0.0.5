@@ -26,8 +26,8 @@ export async function createAnnouncement({
       data: {
         subjectInstanceId,
         userId: user.id,
-        title: title.trim(),
-        content: content.trim()
+        title: title,
+        content: content
       }
     });
     return { success: true, data: announcement };
