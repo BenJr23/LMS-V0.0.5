@@ -1290,6 +1290,13 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
           <div className="space-y-4">
             <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
               <Bell className="w-5 h-5" /> Announcements
+              <button
+                className="ml-2 p-1.5 rounded-md bg-[#800000] text-white hover:bg-[#a52a2a] transition-colors duration-200 shadow-sm flex items-center"
+                title="Add Announcement"
+                // onClick={() => setIsAddAnnouncementModalOpen(true)}
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </h3>
             {subjectInstance.announcements.map((item) => (
               <div key={item.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
