@@ -107,7 +107,6 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null);
-  const [uploadFileName, setUploadFileName] = useState('');
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -395,8 +394,10 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       return;
     }
 
-    if (!uploadFileName.trim()) {
-      toast.error('Please enter a file name');
+    // Check file size (1MB = 1024 * 1024 bytes)
+    const maxSize = 1024 * 1024; // 1MB
+    if (uploadFile.size > maxSize) {
+      toast.error('File size must be less than 1MB');
       return;
     }
 
@@ -409,7 +410,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       setIsUploading(true);
       
       // Upload file to Supabase storage
-      const uploadResult = await uploadModuleFile(uploadFile, selectedFolder.id, uploadFileName.trim());
+      const uploadResult = await uploadModuleFile(uploadFile, selectedFolder.id, uploadFile.name);
       
       if (!uploadResult.success) {
         toast.error(uploadResult.error || 'Failed to upload file');
@@ -418,7 +419,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
 
       // Create database record
       const dbResult = await createUploadedContent({
-        fileName: uploadFileName.trim(),
+        fileName: uploadFile.name,
         filePath: uploadResult.path!,
         subjectInstanceId: resolvedParams.id,
         moduleFolderId: selectedFolder.id
@@ -432,7 +433,6 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       toast.success('File uploaded successfully!');
       setIsUploadModalOpen(false);
       setSelectedFolder(null);
-      setUploadFileName('');
       setUploadFile(null);
       
       // Refresh subject instance data to show new file
@@ -461,6 +461,19 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const validateFileSize = (file: File) => {
+    const maxSize = 1024 * 1024; // 1MB
+    return file.size <= maxSize;
   };
 
   if (isLoading) {
@@ -879,18 +892,6 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  File Name
-                </label>
-                <input
-                  type="text"
-                  value={uploadFileName}
-                  onChange={(e) => setUploadFileName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#800000] focus:border-transparent text-gray-800 transition-all duration-200 placeholder-gray-400"
-                  placeholder="Enter file name..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select File
                 </label>
                 <div
@@ -910,7 +911,12 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                     e.currentTarget.classList.remove('border-[#800000]', 'bg-pink-50');
                     const files = e.dataTransfer.files;
                     if (files.length > 0) {
-                      setUploadFile(files[0]);
+                      const file = files[0];
+                      if (validateFileSize(file)) {
+                        setUploadFile(file);
+                      } else {
+                        toast.error('File size must be less than 1MB');
+                      }
                     }
                   }}
                 >
@@ -918,7 +924,10 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                     <div className="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center space-x-3">
                         <FileText className="w-6 h-6 text-[#800000]" />
-                        <span className="text-sm text-gray-700">{uploadFile.name}</span>
+                        <div>
+                          <span className="text-sm text-gray-700">{uploadFile.name}</span>
+                          <p className="text-xs text-gray-500">{formatFileSize(uploadFile.size)}</p>
+                        </div>
                       </div>
                       <button
                         onClick={() => setUploadFile(null)}
@@ -944,13 +953,26 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                         <p className="text-sm text-gray-500">
                           Supported formats: PDF, DOC, DOCX, TXT, PPTX, XLSX
                         </p>
+                        <p className="text-xs text-gray-400">
+                          Maximum file size: 1MB
+                        </p>
                       </div>
                     </div>
                   )}
                   <input
                     id="file-input"
                     type="file"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        if (validateFileSize(file)) {
+                          setUploadFile(file);
+                        } else {
+                          toast.error('File size must be less than 1MB');
+                          e.target.value = ''; // Reset input
+                        }
+                      }
+                    }}
                     className="hidden"
                     accept=".pdf,.doc,.docx,.txt,.pptx,.xlsx"
                   />
@@ -962,7 +984,6 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                 onClick={() => {
                   setIsUploadModalOpen(false);
                   setSelectedFolder(null);
-                  setUploadFileName('');
                   setUploadFile(null);
                 }}
                 className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
