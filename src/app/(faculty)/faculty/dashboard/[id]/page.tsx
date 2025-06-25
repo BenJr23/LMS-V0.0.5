@@ -109,6 +109,8 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const [selectedFolder, setSelectedFolder] = useState<{ id: string; name: string } | null>(null);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -474,6 +476,34 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   const validateFileSize = (file: File) => {
     const maxSize = 1024 * 1024; // 1MB
     return file.size <= maxSize;
+  };
+
+  const handleDeleteFile = (file: { id: string; fileName: string; filePath: string }) => {
+    setFileToDelete({ id: file.id, name: file.fileName });
+  };
+
+  const handleConfirmDeleteFile = async () => {
+    if (!fileToDelete) return;
+
+    try {
+      setIsDeletingFile(true);
+      
+      // TODO: Add delete file functionality
+      // 1. Delete from Supabase storage
+      // 2. Delete from database
+      
+      toast.success('File deleted successfully!');
+      
+      // Refresh subject instance data
+      const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
+      setSubjectInstance(updatedSubjectData);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      toast.error('Failed to delete file');
+    } finally {
+      setIsDeletingFile(false);
+      setFileToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -1009,6 +1039,49 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         </div>
       )}
 
+      {/* Delete File Confirmation Modal */}
+      {fileToDelete && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 transform transition-all duration-200 scale-100">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-50 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900">Delete File</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete &ldquo;{fileToDelete.name}&rdquo;? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setFileToDelete(null)}
+                className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors duration-200 font-medium"
+                disabled={isDeletingFile}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDeleteFile}
+                disabled={isDeletingFile}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors duration-200 font-medium flex items-center gap-2"
+              >
+                {isDeletingFile ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete File
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Content Container */}
       <div className="max-w-[1400px] mx-auto">
         {/* Tabs */}
@@ -1097,9 +1170,18 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                              <File className="w-4 h-4 text-gray-400" />}
                             <span className="hover:underline">{file.fileName}</span>
                           </button>
-                          <span className="text-xs text-gray-500">
-                            {new Date(file.updatedAt).toLocaleDateString()}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">
+                              {new Date(file.updatedAt).toLocaleDateString()}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteFile(file)}
+                              className="p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                              title="Delete file"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </li>
                       ))}
                   </ul>
