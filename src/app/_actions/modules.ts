@@ -292,3 +292,62 @@ export async function editModuleFolder({
     };
   }
 }
+
+export async function deleteModuleFolder(folderId: string) {
+  try {
+    const user = await currentUser();
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated'
+      };
+    }
+
+    // Find the folder and check ownership
+    const folder = await prisma.moduleFolder.findUnique({
+      where: { id: folderId },
+      include: { uploadedContents: true }
+    });
+    if (!folder || folder.userId !== user.id) {
+      return {
+        success: false,
+        error: 'Folder not found or you do not have permission to delete it.'
+      };
+    }
+
+    // Delete all files from Supabase storage
+    const filePaths = folder.uploadedContents.map(file => file.filePath);
+    if (filePaths.length > 0) {
+      const { error: storageError } = await supabaseAdmin.storage
+        .from('lms')
+        .remove(filePaths);
+      if (storageError) {
+        console.error('Error deleting files from storage:', storageError);
+        return {
+          success: false,
+          error: 'Failed to delete files from storage'
+        };
+      }
+    }
+
+    // Delete all UploadedContent records for this folder
+    await prisma.uploadedContent.deleteMany({
+      where: { moduleFolderId: folderId }
+    });
+
+    // Delete the folder itself
+    await prisma.moduleFolder.delete({
+      where: { id: folderId }
+    });
+
+    return {
+      success: true
+    };
+  } catch (error) {
+    console.error('Error deleting module folder:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete module folder'
+    };
+  }
+}

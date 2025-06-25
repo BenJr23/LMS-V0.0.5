@@ -5,7 +5,7 @@ import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCirc
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
-import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder } from '@/app/_actions/modules';
+import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder, deleteModuleFolder } from '@/app/_actions/modules';
 import toast from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
@@ -568,8 +568,11 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     try {
       setIsDeletingFolder(true);
       
-      // TODO: Add delete folder functionality
-      // const result = await deleteModuleFolder(folderToDelete.id);
+      const result = await deleteModuleFolder(folderToDelete.id);
+      if (!result.success) {
+        toast.error(result.error || 'Failed to delete folder');
+        return;
+      }
 
       toast.success('Folder deleted successfully!');
       setIsDeleteFolderModalOpen(false);
