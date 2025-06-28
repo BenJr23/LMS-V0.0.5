@@ -48,7 +48,7 @@ export default function Home() {
                   className="mb-4"
                 />
                 <h1 className="text-3xl text-center text-[#800000] w-full">
-                  Welcome to <span className='font-bold'>SJSFI-SIS Portal</span>
+                  Welcome to <span className='font-bold'>SJSFI-LMS Portal</span>
                 </h1>
               </div>
 
