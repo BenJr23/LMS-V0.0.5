@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Mail, Lock } from 'lucide-react';
 import Image from 'next/image';
@@ -14,10 +13,10 @@ export default function Home() {
   const [focused, setFocused] = useState({ email: false, password: false });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  const { signIn, isLoaded } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
 
-  const emailRegex = /^[a-zA-Z0-9._%+-]{3,40}@[a-zA-Z0-9.-]+\.(com)$/;
+  // More flexible email regex that accepts common email formats
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[\W_]).{8,14}$/;
 
   const isEmailValid = emailRegex.test(email);
@@ -33,7 +32,7 @@ export default function Home() {
         ? 'border-green-500 focus:ring-2 focus:ring-green-300'
         : 'border-red-500 focus:ring-2 focus:ring-red-300'
       : 'border-gray-300 focus:ring-2 focus:ring-gray-300'
-      }`;
+    }`;
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -41,24 +40,91 @@ export default function Home() {
     setError(null);
     setIsLoading(true);
 
-    if (!isLoaded || !isEmailValid || !isPasswordValid) {
+    if (!isLoaded) {
       setIsLoading(false);
       return;
     }
 
     try {
-      const result = await signIn.create({ identifier: email, password });
-
-      if (result.status === 'complete') {
-        toast.success('Login successful!');
-        router.push('/student/dashboard');
-      } else {
-        const errorMsg = 'Verification step required.';
+      // Step 1: Call the fetch-faculty API with the inputted email
+      const facultyRes = await fetch(`/api/fetch-students?email=${(email)}`);
+      const facultyData = await facultyRes.json();
+      if (!facultyRes.ok || !facultyData.role) {
+        const errorMsg = facultyData.error || 'Faculty not found or not authorized.';
         setError(errorMsg);
         toast.error(errorMsg);
+        setIsLoading(false);
+        return;
       }
-    } catch {
-      const errorMsg = 'Invalid email or password';
+
+      // Step 1.5: Validate role is one of the allowed roles
+      const validRoles = ['student'];
+      if (!validRoles.includes(facultyData.role)) {
+        const errorMsg = 'Invalid email or password';
+        setError(errorMsg);
+        toast.error(errorMsg);
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Handle sign-in directly
+      console.log('Attempting to sign in...');
+      const signInAttempt = await signIn.create({
+        identifier: email,
+      });
+      
+      const result = await signInAttempt.attemptFirstFactor({
+        strategy: "password",
+        password,
+      });
+
+      if (signInAttempt.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        console.log('Sign-in completed, session is ready...');
+        
+        // Set role as private metadata via API
+        const roleResponse = await fetch('/api/nr', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ role: facultyData.role }),
+        });
+        
+        const roleResult = await roleResponse.json();
+        console.log('Role setting result:', roleResult);
+        
+        if (roleResult.success) {
+          console.log('Session created successfully for', email);
+          
+          // Step 3: Redirect based on role
+          if (facultyData.role === 'student') {
+            window.location.href = '/student/dashboard';
+          } else {
+            window.location.href = '/';
+          }
+        } else {
+          console.log('Role setting failed:', roleResult.error);
+          setError(roleResult.error || 'Failed to set role');
+          toast.error(roleResult.error || 'Failed to set role');
+        }
+      } else {
+        console.log('Sign-in not complete, status:', signInAttempt.status);
+        setError('Verification step required.');
+        toast.error('Verification step required.');
+      }
+    } catch (err: unknown) {
+      console.error('Login error:', err);
+      let errorMsg = 'Invalid email or password';
+      if (
+        typeof err === 'object' &&
+        err !== null &&
+        'errors' in err &&
+        Array.isArray((err as { errors?: unknown }).errors)
+      ) {
+        const errorsArr = (err as { errors: { message?: string }[] }).errors;
+        errorMsg = errorsArr[0]?.message || errorMsg;
+      }
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {
