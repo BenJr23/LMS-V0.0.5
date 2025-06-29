@@ -112,8 +112,9 @@ export default function SubjectsPage() {
         toastOptions={{
           duration: 3000,
           style: {
-            background: '#800000',
-            color: '#fff',
+            background: '#fff',
+            color: '#000',
+            border: '1px solid #e5e7eb',
           },
         }}
       />

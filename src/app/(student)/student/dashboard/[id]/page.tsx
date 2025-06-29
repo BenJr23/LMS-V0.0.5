@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users } from 'lucide-react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Calendar, MessageSquare, HelpCircle, Users, Folder } from 'lucide-react';
 import { getStudentSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getStudentRequirements } from '@/app/_actions/requirement';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
@@ -253,21 +253,29 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
             <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
               <Bell className="w-5 h-5" /> Announcements
             </h3>
-            {subjectInstance.announcements.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
-                <div className="flex flex-col items-center pt-1">
-                  <Bell className="text-[#800000] w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-[#800000] text-lg">{item.title}</h4>
-                  <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
-                  <div
-                    className="mt-1 text-gray-800 text-sm prose max-w-none"
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                </div>
+            {subjectInstance.announcements.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 shadow border border-pink-100 text-center">
+                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-700 mb-2">No Announcements Yet</h4>
+                <p className="text-gray-500">Your teacher hasn't posted any announcements yet. Check back later for updates.</p>
               </div>
-            ))}
+            ) : (
+              subjectInstance.announcements.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
+                  <div className="flex flex-col items-center pt-1">
+                    <Bell className="text-[#800000] w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-[#800000] text-lg">{item.title}</h4>
+                    <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
+                    <div
+                      className="mt-1 text-gray-800 text-sm prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: item.content }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -277,32 +285,50 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
             <h3 className="text-lg font-bold text-[#800000] mb-2 flex items-center gap-2">
               <FileTextIcon className="w-5 h-5" /> Course Files
             </h3>
-            {subjectInstance.moduleFolders.map((mod) => (
-              <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
-                <h4 className="font-medium text-gray-900 mb-2">{mod.folderName}</h4>
-                {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
-                  <div className="text-gray-400 italic text-sm">No files available for this module.</div>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {subjectInstance.uploadedContents
-                      .filter(content => content.moduleFolderId === mod.id)
-                      .map((file) => (
-                        <li key={file.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
-                          <span className="flex items-center gap-2">
-                            {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
-                             file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
-                             <File className="w-4 h-4 text-gray-400" />}
-                            {file.fileName}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {new Date(file.updatedAt).toLocaleDateString()}
-                          </span>
-                        </li>
-                      ))}
-                  </ul>
-                )}
+            {subjectInstance.moduleFolders.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 shadow border border-pink-100 text-center">
+                <FileTextIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-700 mb-2">No Files Available</h4>
+                <p className="text-gray-500">Your teacher hasn&apos;t uploaded any course materials yet. Check back later for files.</p>
               </div>
-            ))}
+            ) : (
+              subjectInstance.moduleFolders.map((mod) => (
+                <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
+                  <div className="flex items-center mb-2 gap-2">
+                    <Folder className="w-5 h-5 text-yellow-600" />
+                    <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+                  </div>
+                  {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
+                    <div className="text-gray-400 italic text-sm">No files available for this module.</div>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
+                      {subjectInstance.uploadedContents
+                        .filter(content => content.moduleFolderId === mod.id)
+                        .map((file) => (
+                          <li key={file.id} className="flex items-center justify-between text-sm text-gray-700">
+                            <a
+                              href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${file.filePath}`}
+                              download
+                              className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
+                              title={`Download ${file.fileName}`}
+                            >
+                              {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
+                               file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
+                               file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
+                               file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
+                               <File className="w-4 h-4 text-gray-400" />}
+                              <span className="hover:underline">{file.fileName}</span>
+                            </a>
+                            <span className="text-xs text-gray-500">
+                              {new Date(file.updatedAt).toLocaleDateString()}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 

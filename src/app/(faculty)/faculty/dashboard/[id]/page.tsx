@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, use, useEffect } from 'react';
-import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Calendar, Plus, Eye, Trash2, AlertTriangle, Pencil, X } from 'lucide-react';
+import { Bell, FileText, ClipboardList, File, FileText as FileTextIcon, UserCircle2, Settings, MessageSquare, HelpCircle, Users, Calendar, Plus, Eye, Trash2, AlertTriangle, Pencil, X, Folder } from 'lucide-react';
 import { getSubjectInstance, deleteSubjectInstance, editSubjectInstance } from '@/app/_actions/subjectInstance';
 import { getImageUrl } from '@/app/_actions/uploadIcon';
 import { createRequirement, getRequirements, editRequirement, deleteRequirement } from '@/app/_actions/requirement';
 import { createModuleFolder, uploadModuleFile, createUploadedContent, deleteModuleFile, editModuleFolder, deleteModuleFolder } from '@/app/_actions/modules';
 import { createAnnouncement, editAnnouncement, deleteAnnouncement } from '@/app/_actions/announcements';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import RichTextEditor from '@/components/RichTextEditor';
 import { useRouter } from 'next/navigation';
 
@@ -187,7 +187,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       setIsDeletingSubject(true);
       const result = await deleteSubjectInstance(resolvedParams.id);
       if (result.success) {
-        toast.success('Subject instance deleted successfully');
+        toast.success('Subject instance deleted successfully!');
         router.push('/faculty/dashboard'); // Redirect to dashboard after deletion
       } else {
         toast.error(result.error || 'Failed to delete subject instance');
@@ -219,7 +219,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       });
 
       if (result.success) {
-        toast.success('Subject instance updated successfully');
+        toast.success('Subject instance updated successfully!');
         setIsEditModalOpen(false);
         
         // Update the local state with the new data
@@ -322,7 +322,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
       }
 
       if (result.success) {
-        toast.success(selectedRequirement ? 'Requirement updated successfully!' : `${requirementType} created successfully!`);
+        toast.success(selectedRequirement ? 'Requirement updated successfully!' : 'Requirement created successfully!');
         setIsAddAssignmentModalOpen(false);
         // Reset form and selected requirement
         setAssignmentForm({
@@ -339,12 +339,11 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
           setRequirements(updatedRequirements.data);
         }
       } else {
-        toast.error(result.error || (selectedRequirement ? 'Failed to update requirement' : `Failed to create ${requirementType.toLowerCase()}`));
+        toast.error(result.error || (selectedRequirement ? 'Failed to update requirement' : 'Failed to create requirement'));
       }
     } catch (error) {
       console.error('Error handling requirement:', error);
-      const requirementType = selectedRequirementType as 'FORUM' | 'QUIZ' | 'ASSIGNMENT' | 'ACTIVITY';
-      toast.error(selectedRequirement ? 'Failed to update requirement' : `Failed to create ${requirementType.toLowerCase()}`);
+      toast.error(selectedRequirement ? 'Failed to update requirement' : 'Failed to create requirement');
     }
   };
 
@@ -359,7 +358,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
     try {
       const result = await deleteRequirement(selectedRequirement.id);
       if (result.success) {
-        toast.success(`${selectedRequirement.type} deleted successfully`);
+        toast.success('Requirement deleted successfully!');
         // Refresh requirements data
         const updatedRequirements = await getRequirements(resolvedParams.id);
         if (updatedRequirements.success && updatedRequirements.data) {
@@ -470,16 +469,23 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
   };
 
   const handleDownloadFile = (filePath: string, fileName: string) => {
-    const downloadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${filePath}`;
-    
-    // Create a temporary link element to trigger download
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = fileName;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const downloadUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${filePath}`;
+      
+      // Create a temporary link element to trigger download
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success(`Downloading ${fileName}...`);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -611,13 +617,21 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
         title: announcementForm.title,
         content: announcementForm.content
       });
+      
       if (!result.success) {
         toast.error(result.error || 'Failed to create announcement');
         return;
       }
+      
+      // Show success toast with consistent format
       toast.success('Announcement created successfully!');
-      setIsAddAnnouncementModalOpen(false);
-      setAnnouncementForm({ title: '', content: '' });
+      
+      // Small delay to ensure toast is visible before closing modal
+      setTimeout(() => {
+        setIsAddAnnouncementModalOpen(false);
+        setAnnouncementForm({ title: '', content: '' });
+      }, 1000); // Increased delay to 1 second
+      
       // Refresh subject instance data to show new announcement
       const updatedSubjectData = await getSubjectInstance(resolvedParams.id);
       setSubjectInstance(updatedSubjectData);
@@ -1398,40 +1412,55 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                 <Plus className="w-4 h-4" />
               </button>
             </h3>
-            {subjectInstance.announcements.map((item) => (
-              <div key={item.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
-                <div className="flex flex-col items-center pt-1">
-                  <Bell className="text-[#800000] w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-[#800000] text-lg flex items-center gap-2">
-                    {item.title}
-                    <button
-                      onClick={() => openEditAnnouncementModal(item)}
-                      className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
-                      title="Edit announcement"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedAnnouncement({ id: item.id, title: item.title });
-                        setIsDeleteAnnouncementModalOpen(true);
-                      }}
-                      className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
-                      title="Delete announcement"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </h4>
-                  <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
-                  <div
-                    className="mt-1 text-gray-800 text-sm prose max-w-none"
-                    dangerouslySetInnerHTML={{ __html: item.content }}
-                  />
-                </div>
+            {subjectInstance.announcements.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 shadow border border-pink-100 text-center">
+                <Bell className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-700 mb-2">No Announcements Yet</h4>
+                <p className="text-gray-500 mb-4">Start communicating with your students by creating your first announcement.</p>
+                <button
+                  onClick={() => setIsAddAnnouncementModalOpen(true)}
+                  className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-sm flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Announcement
+                </button>
               </div>
-            ))}
+            ) : (
+              subjectInstance.announcements.map((item) => (
+                <div key={item.id} className="bg-white rounded-lg p-5 shadow flex gap-4 border-l-4 border-[#800000]/80">
+                  <div className="flex flex-col items-center pt-1">
+                    <Bell className="text-[#800000] w-6 h-6" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-[#800000] text-lg flex items-center gap-2">
+                      {item.title}
+                      <button
+                        onClick={() => openEditAnnouncementModal(item)}
+                        className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
+                        title="Edit announcement"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedAnnouncement({ id: item.id, title: item.title });
+                          setIsDeleteAnnouncementModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                        title="Delete announcement"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-1">{subjectInstance.teacherName} • {formatDate(item.createdAt)}</p>
+                    <div
+                      className="mt-1 text-gray-800 text-sm prose max-w-none"
+                      dangerouslySetInnerHTML={{ __html: item.content }}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -1450,79 +1479,99 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                 Add Folder
               </button>
             </div>
-            {subjectInstance.moduleFolders.map((mod) => (
-              <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">{mod.folderName}</h4>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        setFolderToEdit({ id: mod.id, name: mod.folderName });
-                        setEditFolderName(mod.folderName);
-                        setIsEditFolderModalOpen(true);
-                      }}
-                      className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
-                      title="Edit folder"
-                    >
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFolderToDelete({ id: mod.id, name: mod.folderName });
-                        setIsDeleteFolderModalOpen(true);
-                      }}
-                      className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
-                      title="Delete folder"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedFolder({ id: mod.id, name: mod.folderName });
-                        setIsUploadModalOpen(true);
-                      }}
-                      className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Upload
-                    </button>
-                  </div>
-                </div>
-                {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
-                  <div className="text-gray-400 italic text-sm">No files available for this module.</div>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {subjectInstance.uploadedContents
-                      .filter(content => content.moduleFolderId === mod.id)
-                      .map((file) => (
-                        <li key={file.id} className="flex items-center justify-between text-sm text-gray-700 border-b pb-1 last:border-b-0">
-                          <button
-                            onClick={() => handleDownloadFile(file.filePath, file.fileName)}
-                            className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
-                          >
-                            {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
-                             file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
-                             <File className="w-4 h-4 text-gray-400" />}
-                            <span className="hover:underline">{file.fileName}</span>
-                          </button>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">
-                              {new Date(file.updatedAt).toLocaleDateString()}
-                            </span>
-                            <button
-                              onClick={() => handleDeleteFile(file)}
-                              className="p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
-                              title="Delete file"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                  </ul>
-                )}
+            {subjectInstance.moduleFolders.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 shadow border border-pink-100 text-center">
+                <FileTextIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-gray-700 mb-2">No Folders Yet</h4>
+                <p className="text-gray-500 mb-4">Organize your course materials by creating folders and uploading files.</p>
+                <button
+                  onClick={() => setIsAddFolderModalOpen(true)}
+                  className="px-4 py-2 rounded-lg bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 font-medium text-sm flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Folder
+                </button>
               </div>
-            ))}
+            ) : (
+              subjectInstance.moduleFolders.map((mod) => (
+                <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Folder className="w-5 h-5 text-yellow-600" />
+                      <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setFolderToEdit({ id: mod.id, name: mod.folderName });
+                          setEditFolderName(mod.folderName);
+                          setIsEditFolderModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
+                        title="Edit folder"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFolderToDelete({ id: mod.id, name: mod.folderName });
+                          setIsDeleteFolderModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                        title="Delete folder"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedFolder({ id: mod.id, name: mod.folderName });
+                          setIsUploadModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Upload
+                      </button>
+                    </div>
+                  </div>
+                  {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
+                    <div className="text-gray-400 italic text-sm">No files uploaded to this folder yet. Click the Upload button to add files.</div>
+                  ) : (
+                    <ul className="mt-2 space-y-2">
+                      {subjectInstance.uploadedContents
+                        .filter(content => content.moduleFolderId === mod.id)
+                        .map((file) => (
+                          <li key={file.id} className="flex items-center justify-between text-sm text-gray-700">
+                            <button
+                              onClick={() => handleDownloadFile(file.filePath, file.fileName)}
+                              className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
+                            >
+                              {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
+                               file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
+                               file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
+                               file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
+                               <File className="w-4 h-4 text-gray-400" />}
+                              <span className="hover:underline">{file.fileName}</span>
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                {new Date(file.updatedAt).toLocaleDateString()}
+                              </span>
+                              <button
+                                onClick={() => handleDeleteFile(file)}
+                                className="p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                                title="Delete file"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -1785,6 +1834,7 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
           </div>
         </div>
       )}
+      <Toaster />
     </div>
   );
 }

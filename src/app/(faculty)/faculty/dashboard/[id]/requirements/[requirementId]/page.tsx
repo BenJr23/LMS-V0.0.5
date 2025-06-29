@@ -294,17 +294,53 @@ export default function TeacherRequirementDetailPage({ params }: { params: Promi
                   <div className="bg-pink-50/50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">Attached File</h3>
                     {selectedSubmission.filePath ? (
-                      <a 
-                        href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${selectedSubmission.filePath}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#800000] hover:text-[#800000]/80 font-medium inline-flex items-center gap-2"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
-                        </svg>
-                        View File
-                      </a>
+                      selectedSubmission.filePath.toLowerCase().endsWith('.pdf') ? (
+                        <a 
+                          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${selectedSubmission.filePath}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#800000] hover:text-[#800000]/80 font-medium inline-flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                          </svg>
+                          View PDF
+                        </a>
+                      ) : selectedSubmission.filePath.toLowerCase().endsWith('.jpg') || 
+                           selectedSubmission.filePath.toLowerCase().endsWith('.jpeg') || 
+                           selectedSubmission.filePath.toLowerCase().endsWith('.png') ? (
+                        <div className="space-y-4">
+                          <img 
+                            src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${selectedSubmission.filePath}`}
+                            alt="Uploaded image"
+                            className="max-w-full h-auto rounded-lg shadow-md border border-gray-200"
+                            style={{ maxHeight: '400px' }}
+                          />
+                          <a 
+                            href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${selectedSubmission.filePath}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[#800000] hover:text-[#800000]/80 font-medium inline-flex items-center gap-2"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                            </svg>
+                            View Image
+                          </a>
+                        </div>
+                      ) : (
+                        <a 
+                          href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${selectedSubmission.filePath}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#800000] hover:text-[#800000]/80 font-medium inline-flex items-center gap-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V8z" clipRule="evenodd" />
+                          </svg>
+                          View File
+                        </a>
+                      )
                     ) : (
                       <p className="text-gray-500 italic">No file attached yet</p>
                     )}

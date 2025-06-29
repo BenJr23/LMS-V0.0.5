@@ -119,7 +119,7 @@ function FileUploadBox({ onFileSelect }: { onFileSelect: (file: File | null) => 
         ref={fileInputRef}
         onChange={handleFileSelect}
         className="hidden"
-        accept=".pdf,.doc,.docx,.txt"
+        accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
       />
       
       {uploadedFile ? (
@@ -150,7 +150,7 @@ function FileUploadBox({ onFileSelect }: { onFileSelect: (file: File | null) => 
               </button>
             </p>
             <p className="text-sm text-gray-500">
-              Supported formats: PDF, DOC, DOCX, TXT
+              Supported formats: PDF, DOC, DOCX, TXT, JPEG, PNG
             </p>
           </div>
         </div>
@@ -596,6 +596,25 @@ export default function QuizRequirementDetail({
                     <FileText className="w-5 h-5 mr-2" />
                     View PDF
                   </a>
+                ) : requirement.submission.filePath.toLowerCase().endsWith('.jpg') || 
+                     requirement.submission.filePath.toLowerCase().endsWith('.jpeg') || 
+                     requirement.submission.filePath.toLowerCase().endsWith('.png') ? (
+                  <div className="space-y-4">
+                    <img 
+                      src={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${requirement.submission.filePath}`}
+                      alt="Uploaded image"
+                      className="max-w-full h-auto rounded-lg shadow-md border border-gray-200"
+                      style={{ maxHeight: '400px' }}
+                    />
+                    <a 
+                      href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${requirement.submission.filePath}`}
+                      download
+                      className="inline-flex items-center px-5 py-2.5 bg-[#800000] text-white rounded-lg hover:bg-[#800000]/90 transition-colors text-base"
+                    >
+                      <Download className="w-5 h-5 mr-2" />
+                      Download Image
+                    </a>
+                  </div>
                 ) : (
                   <a 
                     href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${requirement.submission.filePath}`}
