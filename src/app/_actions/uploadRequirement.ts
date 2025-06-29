@@ -39,6 +39,7 @@ export async function uploadRequirementFile(file: File) {
       originalName: file.name
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data, error } = await supabaseAdmin.storage
       .from('lms')
       .upload(filePath, buffer, {
