@@ -1493,84 +1493,93 @@ export default function SubjectInstancePage({ params }: { params: Promise<{ id: 
                 </button>
               </div>
             ) : (
-              subjectInstance.moduleFolders.map((mod) => (
-                <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Folder className="w-5 h-5 text-yellow-600" />
-                      <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+              <div className="space-y-4">
+                {subjectInstance.moduleFolders.map((mod) => (
+                  <div key={mod.id} className="bg-white rounded-lg shadow border border-pink-100 overflow-hidden">
+                    {/* Folder Header */}
+                    <div className="bg-pink-50 border-b border-pink-100 px-4 py-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Folder className="w-5 h-5 text-[#800000]" />
+                          <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setFolderToEdit({ id: mod.id, name: mod.folderName });
+                              setEditFolderName(mod.folderName);
+                              setIsEditFolderModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
+                            title="Edit folder"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setFolderToDelete({ id: mod.id, name: mod.folderName });
+                              setIsDeleteFolderModalOpen(true);
+                            }}
+                            className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                            title="Delete folder"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedFolder({ id: mod.id, name: mod.folderName });
+                              setIsUploadModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
+                          >
+                            <Plus className="w-3 h-3" />
+                            Upload
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setFolderToEdit({ id: mod.id, name: mod.folderName });
-                          setEditFolderName(mod.folderName);
-                          setIsEditFolderModalOpen(true);
-                        }}
-                        className="p-1.5 rounded-md hover:bg-pink-100 text-[#800000] transition-colors duration-200"
-                        title="Edit folder"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setFolderToDelete({ id: mod.id, name: mod.folderName });
-                          setIsDeleteFolderModalOpen(true);
-                        }}
-                        className="p-1.5 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
-                        title="Delete folder"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedFolder({ id: mod.id, name: mod.folderName });
-                          setIsUploadModalOpen(true);
-                        }}
-                        className="px-3 py-1.5 rounded-md bg-[#800000] text-white hover:bg-[#600000] transition-colors duration-200 text-sm flex items-center gap-1 shadow-sm"
-                      >
-                        <Plus className="w-3 h-3" />
-                        Upload
-                      </button>
+                    
+                    {/* Files Content */}
+                    <div className="p-4">
+                      {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
+                        <div className="text-gray-400 italic text-sm">No files uploaded to this folder yet. Click the Upload button to add files.</div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {subjectInstance.uploadedContents
+                            .filter(content => content.moduleFolderId === mod.id)
+                            .map((file) => (
+                              <li key={file.id} className="flex items-center justify-between text-sm text-gray-700 py-2 px-3 rounded-md hover:bg-pink-50 transition-colors">
+                                <button
+                                  onClick={() => handleDownloadFile(file.filePath, file.fileName)}
+                                  className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
+                                >
+                                  {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
+                                   file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
+                                   file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
+                                   file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
+                                   <File className="w-4 h-4 text-gray-400" />}
+                                  <span className="hover:underline">{file.fileName}</span>
+                                </button>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(file.updatedAt).toLocaleDateString()}
+                                  </span>
+                                  <button
+                                    onClick={() => handleDeleteFile(file)}
+                                    className="p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
+                                    title="Delete file"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
-                  {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
-                    <div className="text-gray-400 italic text-sm">No files uploaded to this folder yet. Click the Upload button to add files.</div>
-                  ) : (
-                    <ul className="mt-2 space-y-2">
-                      {subjectInstance.uploadedContents
-                        .filter(content => content.moduleFolderId === mod.id)
-                        .map((file) => (
-                          <li key={file.id} className="flex items-center justify-between text-sm text-gray-700">
-                            <button
-                              onClick={() => handleDownloadFile(file.filePath, file.fileName)}
-                              className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
-                            >
-                              {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
-                               file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
-                               file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
-                               file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
-                               <File className="w-4 h-4 text-gray-400" />}
-                              <span className="hover:underline">{file.fileName}</span>
-                            </button>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-gray-500">
-                                {new Date(file.updatedAt).toLocaleDateString()}
-                              </span>
-                              <button
-                                onClick={() => handleDeleteFile(file)}
-                                className="p-1 rounded-md hover:bg-red-100 text-red-600 transition-colors duration-200"
-                                title="Delete file"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}

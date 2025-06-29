@@ -292,42 +292,51 @@ export default function SubjectDetailPage({ params }: { params: Promise<{ id: st
                 <p className="text-gray-500">Your teacher hasn&apos;t uploaded any course materials yet. Check back later for files.</p>
               </div>
             ) : (
-              subjectInstance.moduleFolders.map((mod) => (
-                <div key={mod.id} className="bg-white rounded-lg p-4 shadow border border-pink-100">
-                  <div className="flex items-center mb-2 gap-2">
-                    <Folder className="w-5 h-5 text-yellow-600" />
-                    <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+              <div className="space-y-4">
+                {subjectInstance.moduleFolders.map((mod) => (
+                  <div key={mod.id} className="bg-white rounded-lg shadow border border-pink-100 overflow-hidden">
+                    {/* Folder Header */}
+                    <div className="bg-pink-50 border-b border-pink-100 px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Folder className="w-5 h-5 text-[#800000]" />
+                        <h4 className="font-bold text-lg text-gray-900">{mod.folderName}</h4>
+                      </div>
+                    </div>
+                    
+                    {/* Files Content */}
+                    <div className="p-4">
+                      {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
+                        <div className="text-gray-400 italic text-sm">No files available for this module.</div>
+                      ) : (
+                        <ul className="space-y-2">
+                          {subjectInstance.uploadedContents
+                            .filter(content => content.moduleFolderId === mod.id)
+                            .map((file) => (
+                              <li key={file.id} className="flex items-center justify-between text-sm text-gray-700 py-2 px-3 rounded-md hover:bg-pink-50 transition-colors">
+                                <a
+                                  href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${file.filePath}`}
+                                  download
+                                  className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
+                                  title={`Download ${file.fileName}`}
+                                >
+                                  {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
+                                   file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
+                                   file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
+                                   file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
+                                   <File className="w-4 h-4 text-gray-400" />}
+                                  <span className="hover:underline">{file.fileName}</span>
+                                </a>
+                                <span className="text-xs text-gray-500">
+                                  {new Date(file.updatedAt).toLocaleDateString()}
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
-                  {subjectInstance.uploadedContents.filter(content => content.moduleFolderId === mod.id).length === 0 ? (
-                    <div className="text-gray-400 italic text-sm">No files available for this module.</div>
-                  ) : (
-                    <ul className="mt-2 space-y-2">
-                      {subjectInstance.uploadedContents
-                        .filter(content => content.moduleFolderId === mod.id)
-                        .map((file) => (
-                          <li key={file.id} className="flex items-center justify-between text-sm text-gray-700">
-                            <a
-                              href={`${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/lms/${file.filePath}`}
-                              download
-                              className="flex items-center gap-2 hover:text-[#800000] transition-colors cursor-pointer"
-                              title={`Download ${file.fileName}`}
-                            >
-                              {file.fileName.toLowerCase().endsWith('.pdf') ? <FileText className="w-4 h-4 text-red-500" /> : 
-                               file.fileName.toLowerCase().endsWith('.doc') || file.fileName.toLowerCase().endsWith('.docx') ? <FileText className="w-4 h-4 text-blue-500" /> :
-                               file.fileName.toLowerCase().endsWith('.xlsx') ? <FileText className="w-4 h-4 text-green-500" /> :
-                               file.fileName.toLowerCase().endsWith('.pptx') ? <FileText className="w-4 h-4 text-orange-500" /> : 
-                               <File className="w-4 h-4 text-gray-400" />}
-                              <span className="hover:underline">{file.fileName}</span>
-                            </a>
-                            <span className="text-xs text-gray-500">
-                              {new Date(file.updatedAt).toLocaleDateString()}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         )}
