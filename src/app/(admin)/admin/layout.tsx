@@ -2,9 +2,29 @@
 import Link from 'next/link';
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { useClerk } from '@clerk/nextjs';
+import { useClerk, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isLoaded && !user) {
+      toast.error('Please sign in to access the dashboard');
+      router.push('/faculty-login');
+    }
+  }, [isLoaded, user, router]);
+
+  if (!isLoaded || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-800"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen overflow-visible">
       {/* Sidebar */}
@@ -24,7 +44,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
           {/* Label */}
           <div className="px-6 py-2 text-sm font-medium text-white text-center">
-            Student Portal
+            Admin Portal
           </div>
 
           {/* Bottom separator */}
@@ -50,9 +70,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col bg-gray-100">
         {/* Topbar */}
         <header className="absolute top-0 left-64 right-0 z-30 px-6 py-4 bg-white/80 shadow border-b border-gray-200 backdrop-blur-md flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-[#800000] tracking-wide">WELCOME USER</h1>
+          <h1 className="text-xl font-semibold text-[#800000] tracking-wide">
+            Welcome, {user.firstName || 'Admin'}!
+          </h1>
           <div className="flex items-center space-x-4">
-            <StudentUserDropdown />
+            <AdminUserDropdown />
           </div>
         </header>
 
@@ -63,10 +85,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   );
 }
 
-function StudentUserDropdown() {
+function AdminUserDropdown() {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { signOut } = useClerk();
+  const { user } = useUser();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -91,7 +114,7 @@ function StudentUserDropdown() {
         onClick={() => setOpen((prev) => !prev)}
         type="button"
       >
-        Admin User
+        {user?.firstName || 'Admin User'}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200 animate-fade-in">
@@ -107,7 +130,8 @@ function StudentUserDropdown() {
             className="block px-4 py-2 text-gray-800 hover:bg-gray-100 transition"
             onClick={async () => {
               setOpen(false);
-              await signOut(); // Clerk sign out
+              await signOut();
+              toast.success('Logged out successfully');
             }}
           >
             LOGOUT
